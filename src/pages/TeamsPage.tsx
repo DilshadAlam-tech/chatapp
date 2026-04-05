@@ -19,6 +19,7 @@ import {
   joinTeam,
   leaveTeam,
   respondInvite,
+  useStoreSubscription,
 } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -26,12 +27,12 @@ const games: GameType[] = ["Free Fire Max", "BGMI", "Call of Duty"];
 
 export default function TeamsPage() {
   const { user } = useAuth();
+  useStoreSubscription();
   const [showCreate, setShowCreate] = useState(false);
   const [name, setName] = useState("");
   const [game, setGame] = useState<GameType>("Free Fire Max");
   const [maxMembers, setMaxMembers] = useState(4);
   const [description, setDescription] = useState("");
-  const [, setRefreshKey] = useState(0);
 
   if (!user) return null;
 
@@ -48,9 +49,7 @@ export default function TeamsPage() {
     { label: "Sent", value: pendingSentInvites.length },
   ];
 
-  const refresh = () => setRefreshKey((currentValue) => currentValue + 1);
-
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!name.trim()) {
@@ -58,7 +57,7 @@ export default function TeamsPage() {
       return;
     }
 
-    createTeam({
+    await createTeam({
       teamName: name.trim(),
       game,
       leaderId: user.id,
@@ -70,29 +69,26 @@ export default function TeamsPage() {
     setShowCreate(false);
     setName("");
     setDescription("");
-    refresh();
     toast.success("Team created");
   };
 
-  const handleRespond = (inviteId: string, status: "accepted" | "rejected") => {
-    const result = respondInvite(inviteId, status);
+  const handleRespond = async (inviteId: string, status: "accepted" | "rejected") => {
+    const result = await respondInvite(inviteId, status);
     if (!result.success) {
       toast.error(result.error || "Could not update invite");
       return;
     }
 
-    refresh();
     toast.success(status === "accepted" ? "Joined team" : "Invite rejected");
   };
 
-  const handleJoinOpenTeam = (teamId: string) => {
-    const result = joinTeam(teamId, user.id);
+  const handleJoinOpenTeam = async (teamId: string) => {
+    const result = await joinTeam(teamId, user.id);
     if (!result.success) {
       toast.error(result.error);
       return;
     }
 
-    refresh();
     toast.success("Joined squad");
   };
 
@@ -135,13 +131,13 @@ export default function TeamsPage() {
                       </div>
                       <div className="flex gap-1.5">
                         <button
-                          onClick={() => handleRespond(invite.inviteId, "accepted")}
+                          onClick={() => void handleRespond(invite.inviteId, "accepted")}
                           className="rounded-lg bg-success/20 p-2 text-success hover:bg-success/30"
                         >
                           <Check size={14} />
                         </button>
                         <button
-                          onClick={() => handleRespond(invite.inviteId, "rejected")}
+                          onClick={() => void handleRespond(invite.inviteId, "rejected")}
                           className="rounded-lg bg-destructive/20 p-2 text-destructive hover:bg-destructive/30"
                         >
                           <X size={14} />
@@ -237,9 +233,8 @@ export default function TeamsPage() {
                     <div className="flex gap-2">
                       {isLeader ? (
                         <button
-                          onClick={() => {
-                            deleteTeam(team.teamId);
-                            refresh();
+                          onClick={async () => {
+                            await deleteTeam(team.teamId);
                             toast.success("Team deleted");
                           }}
                           className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-destructive/10 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/20"
@@ -249,9 +244,8 @@ export default function TeamsPage() {
                         </button>
                       ) : (
                         <button
-                          onClick={() => {
-                            leaveTeam(team.teamId, user.id);
-                            refresh();
+                          onClick={async () => {
+                            await leaveTeam(team.teamId, user.id);
                             toast.success("Left team");
                           }}
                           className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-muted py-1.5 text-xs font-medium hover:bg-destructive/10 hover:text-destructive"
@@ -286,7 +280,7 @@ export default function TeamsPage() {
                         {team.description && <p className="mt-1 text-xs text-muted-foreground">{team.description}</p>}
                       </div>
                       <button
-                        onClick={() => handleJoinOpenTeam(team.teamId)}
+                        onClick={() => void handleJoinOpenTeam(team.teamId)}
                         className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/15"
                       >
                         Join

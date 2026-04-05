@@ -13,6 +13,7 @@ export default function AuthPage() {
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { setUser } = useAuth();
   const navigate = useNavigate();
 
@@ -36,67 +37,77 @@ export default function AuthPage() {
     "w-full rounded-lg border border-border bg-muted px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground transition-all focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary";
   const labelCls = "mb-1 block text-xs font-medium text-muted-foreground";
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setIsSubmitting(true);
 
-    const result = login(loginEmail.trim(), loginPassword);
-    if (!result.success || !result.user) {
-      setError(result.error || "Login failed");
-      return;
+    try {
+      const result = await login(loginEmail.trim(), loginPassword);
+      if (!result.success || !result.user) {
+        setError(result.error || "Login failed");
+        return;
+      }
+
+      setUser(result.user);
+      navigate("/");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setUser(result.user);
-    navigate("/");
   };
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setIsSubmitting(true);
 
-    if (
-      !form.username ||
-      !form.realName ||
-      !form.email ||
-      !form.password ||
-      !form.contactNumber ||
-      !form.game ||
-      !form.gameUid ||
-      !form.gameName ||
-      !form.role
-    ) {
-      setError("All fields are required");
-      return;
+    try {
+      if (
+        !form.username ||
+        !form.realName ||
+        !form.email ||
+        !form.password ||
+        !form.contactNumber ||
+        !form.game ||
+        !form.gameUid ||
+        !form.gameName ||
+        !form.role
+      ) {
+        setError("All fields are required");
+        return;
+      }
+
+      if (form.username.trim().length < 4) {
+        setError("Username must be at least 4 characters");
+        return;
+      }
+
+      if (form.password.trim().length < 6) {
+        setError("Password must be at least 6 characters");
+        return;
+      }
+
+      const result = await signUp({
+        ...form,
+        username: form.username.trim(),
+        realName: form.realName.trim(),
+        email: form.email.trim(),
+        contactNumber: form.contactNumber.trim(),
+        gameUid: form.gameUid.trim(),
+        gameName: form.gameName.trim(),
+        avatar: "",
+      });
+
+      if (!result.success || !result.user) {
+        setError(result.error || "Signup failed");
+        return;
+      }
+
+      setUser(result.user);
+      navigate("/");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    if (form.username.trim().length < 4) {
-      setError("Username must be at least 4 characters");
-      return;
-    }
-
-    if (form.password.trim().length < 6) {
-      setError("Password must be at least 6 characters");
-      return;
-    }
-
-    const result = signUp({
-      ...form,
-      username: form.username.trim(),
-      realName: form.realName.trim(),
-      email: form.email.trim(),
-      contactNumber: form.contactNumber.trim(),
-      gameUid: form.gameUid.trim(),
-      gameName: form.gameName.trim(),
-      avatar: "",
-    });
-
-    if (!result.success || !result.user) {
-      setError(result.error || "Signup failed");
-      return;
-    }
-
-    setUser(result.user);
-    navigate("/");
   };
 
   return (
@@ -171,10 +182,11 @@ export default function AuthPage() {
 
             <button
               type="submit"
+              disabled={isSubmitting}
               className="flex w-full items-center justify-center gap-2 rounded-xl gradient-neon-btn py-3 font-heading text-sm font-bold tracking-wider text-primary-foreground transition-all hover:opacity-90 neon-glow"
             >
               <Zap size={16} />
-              LOGIN
+              {isSubmitting ? "PLEASE WAIT..." : "LOGIN"}
             </button>
           </form>
         ) : (
@@ -309,10 +321,11 @@ export default function AuthPage() {
 
             <button
               type="submit"
+              disabled={isSubmitting}
               className="flex w-full items-center justify-center gap-2 rounded-xl gradient-neon-btn py-3 font-heading text-sm font-bold tracking-wider text-primary-foreground transition-all hover:opacity-90 neon-glow"
             >
               <Zap size={16} />
-              CREATE ACCOUNT
+              {isSubmitting ? "PLEASE WAIT..." : "CREATE ACCOUNT"}
             </button>
           </form>
         )}

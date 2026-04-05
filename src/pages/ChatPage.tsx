@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Check, CheckCheck, ExternalLink, Send } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { formatRelativeTime, formatShortTime } from "@/lib/format";
-import { getConversation, getUser, markSeen, sendMessage } from "@/lib/store";
+import { getConversation, getUser, markSeen, sendMessage, useStoreSubscription } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 const starterMessages = [
@@ -17,35 +17,24 @@ export default function ChatPage() {
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const storeVersion = useStoreSubscription();
   const [text, setText] = useState("");
-  const [messages, setMessages] = useState(user && id ? getConversation(user.id, id) : []);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const partner = id ? getUser(id) : undefined;
+  const messages = useMemo(() => {
+    void storeVersion;
+    return user && id ? getConversation(user.id, id) : [];
+  }, [id, storeVersion, user]);
 
   useEffect(() => {
     if (!user || !id) return;
 
-    const syncConversation = () => {
-      const nextMessages = getConversation(user.id, id);
-      const hasUnreadIncoming = nextMessages.some((message) => message.senderId === id && !message.seen);
-
-      if (hasUnreadIncoming) {
-        markSeen(id, user.id);
-        setMessages(getConversation(user.id, id));
-        return;
-      }
-
-      setMessages(nextMessages);
-    };
-
-    syncConversation();
-    const interval = setInterval(() => {
-      syncConversation();
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [id, user]);
+    const hasUnreadIncoming = messages.some((message) => message.senderId === id && !message.seen);
+    if (hasUnreadIncoming) {
+      void markSeen(id, user.id);
+    }
+  }, [id, messages, user]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -53,13 +42,12 @@ export default function ChatPage() {
 
   if (!user || !partner) return null;
 
-  const handleSend = (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!text.trim()) return;
 
-    sendMessage(user.id, partner.id, text.trim());
+    await sendMessage(user.id, partner.id, text.trim());
     setText("");
-    setMessages(getConversation(user.id, partner.id));
   };
 
   const fillStarterMessage = (value: string) => {

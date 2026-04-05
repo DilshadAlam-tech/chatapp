@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { MessageSquare, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -6,57 +6,46 @@ import BottomNav from "@/components/BottomNav";
 import TopBar from "@/components/TopBar";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatShortTime } from "@/lib/format";
-import { getChatPartners, getConversation, getUser } from "@/lib/store";
+import { getChatPartners, getConversation, getUser, useStoreSubscription } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 export default function ChatListPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  useStoreSubscription();
   const [search, setSearch] = useState("");
-  const [refreshKey, setRefreshKey] = useState(0);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setRefreshKey((currentValue) => currentValue + 1);
-    }, 1000);
+  const normalizedSearch = search.trim().toLowerCase();
+  const conversations = user
+    ? getChatPartners(user.id)
+        .map((partnerId) => {
+          const partner = getUser(partnerId);
+          if (!partner) return null;
 
-    return () => clearInterval(interval);
-  }, []);
+          const messages = getConversation(user.id, partnerId);
+          const lastMessage = messages[messages.length - 1];
+          const unreadCount = messages.filter((message) => message.senderId === partnerId && !message.seen).length;
 
-  const conversations = useMemo(() => {
-    if (!user) return [];
-
-    const normalizedSearch = search.trim().toLowerCase();
-
-    return getChatPartners(user.id)
-      .map((partnerId) => {
-        const partner = getUser(partnerId);
-        if (!partner) return null;
-
-        const messages = getConversation(user.id, partnerId);
-        const lastMessage = messages[messages.length - 1];
-        const unreadCount = messages.filter((message) => message.senderId === partnerId && !message.seen).length;
-
-        return {
-          partner,
-          lastMessage,
-          unreadCount,
-        };
-      })
-      .filter((conversation): conversation is NonNullable<typeof conversation> => Boolean(conversation))
-      .filter((conversation) => {
-        if (!normalizedSearch) return true;
-        return [conversation.partner.username, conversation.partner.gameName, conversation.lastMessage?.text || ""]
-          .join(" ")
-          .toLowerCase()
-          .includes(normalizedSearch);
-      })
-      .sort((firstConversation, secondConversation) => {
-        const firstTimestamp = firstConversation.lastMessage?.timestamp || "";
-        const secondTimestamp = secondConversation.lastMessage?.timestamp || "";
-        return secondTimestamp.localeCompare(firstTimestamp);
-      });
-  }, [refreshKey, search, user]);
+          return {
+            partner,
+            lastMessage,
+            unreadCount,
+          };
+        })
+        .filter((conversation): conversation is NonNullable<typeof conversation> => Boolean(conversation))
+        .filter((conversation) => {
+          if (!normalizedSearch) return true;
+          return [conversation.partner.username, conversation.partner.gameName, conversation.lastMessage?.text || ""]
+            .join(" ")
+            .toLowerCase()
+            .includes(normalizedSearch);
+        })
+        .sort((firstConversation, secondConversation) => {
+          const firstTimestamp = firstConversation.lastMessage?.timestamp || "";
+          const secondTimestamp = secondConversation.lastMessage?.timestamp || "";
+          return secondTimestamp.localeCompare(firstTimestamp);
+        })
+    : [];
 
   if (!user) return null;
 

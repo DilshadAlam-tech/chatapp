@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { ArrowLeft, Bell, CheckCircle, MessageSquare, Trash2, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -6,7 +6,7 @@ import BottomNav from "@/components/BottomNav";
 import TopBar from "@/components/TopBar";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDateTime } from "@/lib/format";
-import { clearNotifications, getUserNotifications, markNotificationsRead } from "@/lib/store";
+import { clearNotifications, getUserNotifications, markNotificationsRead, useStoreSubscription } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 const typeIcons = {
@@ -19,13 +19,12 @@ const typeIcons = {
 export default function NotificationsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [, setRefreshKey] = useState(0);
+  useStoreSubscription();
 
   useEffect(() => {
     if (!user) return;
 
-    markNotificationsRead(user.id);
-    setRefreshKey((currentValue) => currentValue + 1);
+    void markNotificationsRead(user.id);
   }, [user]);
 
   if (!user) return null;
@@ -64,8 +63,7 @@ export default function NotificationsPage() {
           {notifications.length > 0 && (
             <button
               onClick={() => {
-                clearNotifications(user.id);
-                setRefreshKey((currentValue) => currentValue + 1);
+                void clearNotifications(user.id);
               }}
               className="rounded-lg border border-border bg-muted p-2 text-muted-foreground transition-colors hover:text-destructive"
             >

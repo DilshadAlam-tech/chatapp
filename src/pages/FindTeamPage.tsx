@@ -14,6 +14,7 @@ import {
   getUserTeams,
   getUsers,
   sendInvite,
+  useStoreSubscription,
 } from "@/lib/store";
 
 const games: (GameType | "")[] = ["", "Free Fire Max", "BGMI", "Call of Duty"];
@@ -21,6 +22,7 @@ const roles: (RoleType | "")[] = ["", "IGL", "Primary Rusher", "Secondary Rusher
 
 export default function FindTeamPage() {
   const { user } = useAuth();
+  const storeVersion = useStoreSubscription();
   const [search, setSearch] = useState("");
   const [gameFilter, setGameFilter] = useState<GameType | "">("");
   const [roleFilter, setRoleFilter] = useState<RoleType | "">("");
@@ -28,11 +30,11 @@ export default function FindTeamPage() {
   const [onlineOnly, setOnlineOnly] = useState(false);
   const [selectedTeamId, setSelectedTeamId] = useState("");
 
-  const blockedUsers = useMemo(() => (user ? getBlockedUsers(user.id) : []), [user]);
-  const leaderTeams = useMemo(
-    () => (user ? getUserTeams(user.id).filter((team) => team.leaderId === user.id) : []),
-    [user],
-  );
+  const blockedUsers = user ? getBlockedUsers(user.id) : [];
+  const leaderTeams = useMemo(() => {
+    void storeVersion;
+    return user ? getUserTeams(user.id).filter((team) => team.leaderId === user.id) : [];
+  }, [storeVersion, user]);
 
   useEffect(() => {
     if (!leaderTeams.length) {
@@ -47,38 +49,32 @@ export default function FindTeamPage() {
 
   const activeTeam = leaderTeams.find((team) => team.teamId === selectedTeamId) || leaderTeams[0];
 
-  const players = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
+  const normalizedSearch = search.trim().toLowerCase();
+  const players = getUsers()
+    .filter((player) => {
+      if (!user || player.id === user.id || player.flagged || blockedUsers.includes(player.id)) return false;
+      if (gameFilter && player.game !== gameFilter) return false;
+      if (roleFilter && player.role !== roleFilter) return false;
+      if (onlineOnly && !player.online) return false;
 
-    return getUsers()
-      .filter((player) => {
-        if (!user || player.id === user.id || player.flagged || blockedUsers.includes(player.id)) return false;
-        if (gameFilter && player.game !== gameFilter) return false;
-        if (roleFilter && player.role !== roleFilter) return false;
-        if (onlineOnly && !player.online) return false;
+      if (!normalizedSearch) return true;
 
-        if (!normalizedSearch) return true;
+      return [player.username, player.gameName, player.role, player.game]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedSearch);
+    })
+    .sort((firstPlayer, secondPlayer) => {
+      if (firstPlayer.online !== secondPlayer.online) return Number(secondPlayer.online) - Number(firstPlayer.online);
+      if (firstPlayer.verified !== secondPlayer.verified) return Number(secondPlayer.verified) - Number(firstPlayer.verified);
+      return secondPlayer.activityScore - firstPlayer.activityScore;
+    });
 
-        return [player.username, player.gameName, player.role, player.game]
-          .join(" ")
-          .toLowerCase()
-          .includes(normalizedSearch);
-      })
-      .sort((firstPlayer, secondPlayer) => {
-        if (firstPlayer.online !== secondPlayer.online) return Number(secondPlayer.online) - Number(firstPlayer.online);
-        if (firstPlayer.verified !== secondPlayer.verified) return Number(secondPlayer.verified) - Number(firstPlayer.verified);
-        return secondPlayer.activityScore - firstPlayer.activityScore;
-      });
-  }, [blockedUsers, gameFilter, onlineOnly, roleFilter, search, user]);
-
-  const stats = useMemo(
-    () => [
-      { label: "Players", value: players.length },
-      { label: "Online", value: players.filter((player) => player.online).length },
-      { label: "Verified", value: players.filter((player) => player.verified).length },
-    ],
-    [players],
-  );
+  const stats = [
+    { label: "Players", value: players.length },
+    { label: "Online", value: players.filter((player) => player.online).length },
+    { label: "Verified", value: players.filter((player) => player.verified).length },
+  ];
 
   const getInviteMeta = (playerId: string) => {
     if (!activeTeam) return { disabled: false, label: "Invite" };
@@ -88,7 +84,7 @@ export default function FindTeamPage() {
     return { disabled: false, label: "Invite" };
   };
 
-  const handleInvite = (playerId: string) => {
+  const handleInvite = async (playerId: string) => {
     if (!user) return;
     if (!activeTeam) {
       toast.error("Create a team first to start inviting players");
@@ -101,7 +97,7 @@ export default function FindTeamPage() {
       return;
     }
 
-    const result = sendInvite(activeTeam.teamId, user.id, playerId);
+    const result = await sendInvite(activeTeam.teamId, user.id, playerId);
     if (result.success) {
       toast.success(`Invite sent from ${activeTeam.teamName}`);
       return;

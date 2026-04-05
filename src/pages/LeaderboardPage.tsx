@@ -1,30 +1,27 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Flame, Medal, Star, Trophy } from "lucide-react";
 
 import BottomNav from "@/components/BottomNav";
 import TopBar from "@/components/TopBar";
 import { useAuth } from "@/contexts/AuthContext";
-import { GameType, getUsers } from "@/lib/store";
+import { GameType, getUsers, useStoreSubscription } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 const gameOptions: Array<GameType | "All"> = ["All", "Free Fire Max", "BGMI", "Call of Duty"];
 
 export default function LeaderboardPage() {
   const { user } = useAuth();
+  useStoreSubscription();
   const [activeGame, setActiveGame] = useState<GameType | "All">("All");
 
-  const players = useMemo(
-    () =>
-      getUsers()
-        .filter((player) => !player.flagged)
-        .filter((player) => activeGame === "All" || player.game === activeGame)
-        .sort((firstPlayer, secondPlayer) => {
-          const firstScore = firstPlayer.level * 10 + firstPlayer.activityScore;
-          const secondScore = secondPlayer.level * 10 + secondPlayer.activityScore;
-          return secondScore - firstScore;
-        }),
-    [activeGame],
-  );
+  const players = getUsers()
+    .filter((player) => !player.flagged)
+    .filter((player) => activeGame === "All" || player.game === activeGame)
+    .sort((firstPlayer, secondPlayer) => {
+      const firstScore = firstPlayer.level * 10 + firstPlayer.activityScore;
+      const secondScore = secondPlayer.level * 10 + secondPlayer.activityScore;
+      return secondScore - firstScore;
+    });
 
   const rankIcons = [
     <Trophy key={0} size={18} className="text-warning" />,
@@ -84,9 +81,7 @@ export default function LeaderboardPage() {
                     {player.username}
                     {isCurrentUser && <span className="ml-2 text-[10px] uppercase tracking-wide text-primary">You</span>}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    {player.game} · {player.role}
-                  </p>
+                  <p className="text-xs text-muted-foreground">{player.game} - {player.role}</p>
                 </div>
 
                 <div className="text-right">

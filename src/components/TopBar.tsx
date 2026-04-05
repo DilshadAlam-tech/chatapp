@@ -1,28 +1,17 @@
-import { useEffect, useState } from "react";
 import { Bell, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { getUnreadCount } from "@/lib/store";
+import { getUnreadCount, useStoreSubscription } from "@/lib/store";
 
 export default function TopBar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [refreshKey, setRefreshKey] = useState(0);
+  useStoreSubscription();
   const unread = user ? getUnreadCount(user.id) : 0;
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setRefreshKey((currentValue) => currentValue + 1);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  void refreshKey;
-
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate("/");
   };
 
@@ -46,7 +35,7 @@ export default function TopBar() {
                   </span>
                 )}
               </button>
-              <button onClick={handleLogout} className="p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-destructive">
+              <button onClick={() => void handleLogout()} className="p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-destructive">
                 <LogOut size={18} />
               </button>
             </>
