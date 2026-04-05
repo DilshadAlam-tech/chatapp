@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { UserProfile, getCurrentUser, logout as storeLogout, seedDemoData } from '@/lib/store';
+import { UserProfile, getCurrentUser, logout as storeLogout } from '@/lib/store';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -19,7 +19,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    seedDemoData();
     refreshUser();
   }, []);
 
