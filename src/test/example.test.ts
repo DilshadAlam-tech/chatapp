@@ -4,9 +4,11 @@ import {
   createTeam,
   getTeam,
   getUserInvites,
+  getUserTeams,
   joinTeam,
   leaveTeam,
   login,
+  respondInvite,
   sendInvite,
   signUp,
 } from "@/lib/store";
@@ -123,6 +125,65 @@ describe("store flows", () => {
     expect(updatedTeam?.members).toEqual([teammate.user!.id, newJoiner.user!.id]);
   });
 
+  it("keeps an invite pending when accepting would join a full team", () => {
+    const leader = createUser({}, "device-leader");
+    const teammate = createUser(
+      {
+        username: "support88",
+        realName: "Support",
+        email: "support@example.com",
+        password: "secret88",
+        contactNumber: "9888888882",
+        gameUid: "FF-8888",
+        gameName: "SupportFF",
+        level: 27,
+        role: "Support",
+      },
+      "device-teammate",
+    );
+    const recruit = createUser(
+      {
+        username: "rusher11",
+        realName: "Rusher",
+        email: "rusher@example.com",
+        password: "secret11",
+        contactNumber: "9888888883",
+        gameUid: "FF-1111",
+        gameName: "RushFF",
+        level: 22,
+        role: "Primary Rusher",
+      },
+      "device-joiner",
+    );
+
+    expect(leader.user).toBeTruthy();
+    expect(teammate.user).toBeTruthy();
+    expect(recruit.user).toBeTruthy();
+
+    const team = createTeam({
+      teamName: "Full Team",
+      game: "Free Fire Max",
+      leaderId: leader.user!.id,
+      members: [leader.user!.id],
+      maxMembers: 2,
+      description: "Fills up after the invite is sent",
+    });
+
+    expect(sendInvite(team.teamId, leader.user!.id, recruit.user!.id).success).toBe(true);
+    expect(joinTeam(team.teamId, teammate.user!.id).success).toBe(true);
+
+    const invite = getUserInvites(recruit.user!.id)[0];
+    const result = respondInvite(invite.inviteId, "accepted");
+
+    expect(result).toEqual({
+      success: false,
+      error: "Team is already full",
+    });
+    expect(getUserInvites(recruit.user!.id)).toHaveLength(1);
+    expect(getUserTeams(recruit.user!.id)).toHaveLength(0);
+    expect(getTeam(team.teamId)?.members).toEqual([leader.user!.id, teammate.user!.id]);
+  });
+
   it("deletes a team when the only member leaves", () => {
     const signUpResult = signUp({
       username: "solo88",
@@ -151,5 +212,34 @@ describe("store flows", () => {
 
     leaveTeam(team.teamId, signUpResult.user!.id);
     expect(getTeam(team.teamId)).toBeUndefined();
+  });
+
+  it("allows creating teams with more than six max members", () => {
+    const signUpResult = signUp({
+      username: "large88",
+      realName: "Large Team",
+      email: "large@example.com",
+      password: "secret88",
+      contactNumber: "9777777777",
+      game: "BGMI",
+      gameUid: "BG-LARGE",
+      gameName: "LargeBGMI",
+      level: 18,
+      role: "Support",
+      avatar: "",
+    });
+
+    expect(signUpResult.user).toBeTruthy();
+
+    const team = createTeam({
+      teamName: "Big Roster",
+      game: "BGMI",
+      leaderId: signUpResult.user!.id,
+      members: [signUpResult.user!.id],
+      maxMembers: 12,
+      description: "",
+    });
+
+    expect(team.maxMembers).toBe(12);
   });
 });

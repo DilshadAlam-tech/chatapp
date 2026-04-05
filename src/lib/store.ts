@@ -234,7 +234,7 @@ export function getTeam(id: string): Team | undefined {
 export function createTeam(data: Omit<Team, "teamId" | "createdAt">): Team {
   const team: Team = {
     ...data,
-    maxMembers: Math.max(2, Math.min(6, data.maxMembers)),
+    maxMembers: Math.max(2, Math.floor(data.maxMembers) || 2),
     teamId: generateId(),
     createdAt: now(),
   };
@@ -348,18 +348,21 @@ export function sendInvite(teamId: string, senderId: string, receiverId: string)
   return { success: true };
 }
 
-export function respondInvite(inviteId: string, status: "accepted" | "rejected") {
+export function respondInvite(inviteId: string, status: "accepted" | "rejected"): { success: boolean; error?: string } {
   const invite = getInvites().find((existingInvite) => existingInvite.inviteId === inviteId);
-  if (!invite) return;
+  if (!invite) return { success: false, error: "Invite not found" };
+
+  if (status === "accepted") {
+    const joinResult = joinTeam(invite.teamId, invite.receiverId);
+    if (!joinResult.success) {
+      return { success: false, error: joinResult.error || "Could not join team" };
+    }
+  }
 
   const invites = getInvites().map((existingInvite) =>
     existingInvite.inviteId === inviteId ? { ...existingInvite, status } : existingInvite,
   );
   setStore(STORAGE_KEYS.invites, invites);
-
-  if (status === "accepted") {
-    joinTeam(invite.teamId, invite.receiverId);
-  }
 
   const team = getTeam(invite.teamId);
   addNotification(
@@ -368,6 +371,8 @@ export function respondInvite(inviteId: string, status: "accepted" | "rejected")
     `${getUser(invite.receiverId)?.username || "A player"} ${status} your invite${team ? ` for ${team.teamName}` : ""}.`,
     invite.teamId,
   );
+
+  return { success: true };
 }
 
 // CHAT

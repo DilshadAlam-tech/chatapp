@@ -26,9 +26,22 @@ export default function ChatPage() {
   useEffect(() => {
     if (!user || !id) return;
 
-    markSeen(id, user.id);
+    const syncConversation = () => {
+      const nextMessages = getConversation(user.id, id);
+      const hasUnreadIncoming = nextMessages.some((message) => message.senderId === id && !message.seen);
+
+      if (hasUnreadIncoming) {
+        markSeen(id, user.id);
+        setMessages(getConversation(user.id, id));
+        return;
+      }
+
+      setMessages(nextMessages);
+    };
+
+    syncConversation();
     const interval = setInterval(() => {
-      setMessages(getConversation(user.id, id));
+      syncConversation();
     }, 1000);
 
     return () => clearInterval(interval);

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MessageSquare, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -13,6 +13,15 @@ export default function ChatListPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRefreshKey((currentValue) => currentValue + 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const conversations = useMemo(() => {
     if (!user) return [];
@@ -47,7 +56,7 @@ export default function ChatListPage() {
         const secondTimestamp = secondConversation.lastMessage?.timestamp || "";
         return secondTimestamp.localeCompare(firstTimestamp);
       });
-  }, [search, user]);
+  }, [refreshKey, search, user]);
 
   if (!user) return null;
 

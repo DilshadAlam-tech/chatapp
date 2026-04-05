@@ -75,7 +75,12 @@ export default function TeamsPage() {
   };
 
   const handleRespond = (inviteId: string, status: "accepted" | "rejected") => {
-    respondInvite(inviteId, status);
+    const result = respondInvite(inviteId, status);
+    if (!result.success) {
+      toast.error(result.error || "Could not update invite");
+      return;
+    }
+
     refresh();
     toast.success(status === "accepted" ? "Joined team" : "Invite rejected");
   };
@@ -126,7 +131,7 @@ export default function TeamsPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-sm font-semibold">{team?.teamName || "Unknown Team"}</p>
-                        <p className="text-xs text-muted-foreground">From {sender?.username || "Unknown"} · {team?.game || "Unknown game"}</p>
+                        <p className="text-xs text-muted-foreground">From {sender?.username || "Unknown"} - {team?.game || "Unknown game"}</p>
                       </div>
                       <div className="flex gap-1.5">
                         <button
@@ -164,7 +169,7 @@ export default function TeamsPage() {
                       <div>
                         <p className="text-sm font-semibold">{receiver?.username || "Unknown player"}</p>
                         <p className="text-xs text-muted-foreground">
-                          {team?.teamName || "Unknown team"} · sent {formatRelativeTime(invite.createdAt)}
+                          {team?.teamName || "Unknown team"} - sent {formatRelativeTime(invite.createdAt)}
                         </p>
                       </div>
                       <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
@@ -276,7 +281,7 @@ export default function TeamsPage() {
                       <div>
                         <p className="text-sm font-semibold">{team.teamName}</p>
                         <p className="text-xs text-muted-foreground">
-                          {team.game} · by {leader?.username || "Unknown"}
+                          {team.game} - by {leader?.username || "Unknown"}
                         </p>
                         {team.description && <p className="mt-1 text-xs text-muted-foreground">{team.description}</p>}
                       </div>
@@ -324,7 +329,6 @@ export default function TeamsPage() {
                   <input
                     type="number"
                     min={2}
-                    max={6}
                     className={`${inputCls} w-20`}
                     value={maxMembers}
                     onChange={(e) => setMaxMembers(Number(e.target.value))}
