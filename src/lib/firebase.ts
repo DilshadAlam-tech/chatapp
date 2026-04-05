@@ -3,13 +3,14 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBvrqMGgDp6P4yyWoWx3gxWL-beWXwxsCw",
-  authDomain: "st-esport-team-finder.firebaseapp.com",
-  projectId: "st-esport-team-finder",
-  storageBucket: "st-esport-team-finder.firebasestorage.app",
-  messagingSenderId: "110544426628",
-  appId: "1:110544426628:web:df48a422c328cada37d4d1",
-  measurementId: "G-7SMJP4NNYL",
+  apiKey: "AIzaSyDxFAlSwd42XrBbjDniFuFN-NPYfaYaxW8",
+  authDomain: "chatapp-481b5.firebaseapp.com",
+  databaseURL: "https://chatapp-481b5-default-rtdb.firebaseio.com",
+  projectId: "chatapp-481b5",
+  storageBucket: "chatapp-481b5.firebasestorage.app",
+  messagingSenderId: "197646218670",
+  appId: "1:197646218670:web:efec35a95a21b83304c43f",
+  measurementId: "G-CSKZ60MZEG",
 };
 
 const app = initializeApp(firebaseConfig);
