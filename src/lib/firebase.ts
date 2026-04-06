@@ -3,14 +3,13 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDxFAlSwd42XrBbjDniFuFN-NPYfaYaxW8",
-  authDomain: "chatapp-481b5.firebaseapp.com",
-  databaseURL: "https://chatapp-481b5-default-rtdb.firebaseio.com",
-  projectId: "chatapp-481b5",
-  storageBucket: "chatapp-481b5.firebasestorage.app",
-  messagingSenderId: "197646218670",
-  appId: "1:197646218670:web:efec35a95a21b83304c43f",
-  measurementId: "G-CSKZ60MZEG",
+  apiKey: "AIzaSyCPeNJBGrLmtDi6O_5vDruceV0l8M9THkg",
+  authDomain: "st-team-finder.firebaseapp.com",
+  projectId: "st-team-finder",
+  storageBucket: "st-team-finder.firebasestorage.app",
+  messagingSenderId: "949260366780",
+  appId: "1:949260366780:web:e3a445b3654909d646f1b9",
+  measurementId: "G-RSE0NY3JQE",
 };
 
 const app = initializeApp(firebaseConfig);
